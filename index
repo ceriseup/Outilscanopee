@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarification recette — Salon de thé</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #001F54;
+    --cerise: #B42150;
+    --lilas: #C7A0CB;
+    --perle: #F5F4F1;
+    --ligne: #E3E0DC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--perle);
+    font-family: 'DM Sans', Arial, sans-serif;
+    color: var(--navy);
+    padding: 32px 16px 80px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 {
+    font-family: Georgia, serif;
+    font-size: 28px;
+    margin: 0 0 4px;
+    color: var(--navy);
+  }
+  .sub {
+    font-size: 14px;
+    color: #5b5f6b;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--ligne);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    margin: 0 0 14px;
+    color: var(--cerise);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  label {
+    display: block;
+    font-size: 12.5px;
+    color: #5b5f6b;
+    margin-bottom: 4px;
+  }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--ligne);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'DM Sans', Arial, sans-serif;
+    color: var(--navy);
+    background: #fff;
+  }
+  input:focus { outline: 2px solid var(--lilas); border-color: var(--lilas); }
+
+  .row-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 32px;
+    gap: 8px;
+    font-size: 11px;
+    color: #8a8d96;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+  .ingredient-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 32px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .ingredient-cost {
+    font-size: 13px;
+    color: var(--navy);
+    text-align: right;
+    padding-right: 4px;
+  }
+  .remove-btn {
+    background: none;
+    border: none;
+    color: #b7b9c0;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .remove-btn:hover { color: var(--cerise); }
+
+  .add-btn {
+    background: none;
+    border: 1px dashed var(--lilas);
+    color: var(--cerise);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .add-btn:hover { background: var(--perle); }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .grid3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  .result-card {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 10px;
+    padding: 24px;
+  }
+  .result-card h2 {
+    color: var(--lilas);
+    font-family: Georgia, serif;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 16px;
+  }
+  .result-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .result-line span:last-child { font-variant-numeric: tabular-nums; }
+  .result-line.muted { color: #b8c2d9; }
+  .headline {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.25);
+  }
+  .headline .label {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    color: var(--lilas);
+  }
+  .headline .value {
+    font-family: Georgia, serif;
+    font-size: 34px;
+    color: #fff;
+  }
+  .headline .value small {
+    font-size: 15px;
+    color: #b8c2d9;
+    font-family: 'DM Sans', Arial, sans-serif;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--cerise);
+    color: #fff;
+    font-size: 11px;
+    border-radius: 20px;
+    padding: 3px 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  footer.note {
+    font-size: 12px;
+    color: #8a8d96;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  footer.legal {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ligne);
+    font-size: 11.5px;
+    color: #9a9da5;
+    line-height: 1.7;
+  }
+  footer.legal strong { color: #6b6e77; }
+  footer.legal a { color: var(--cerise); text-decoration: none; }
+  footer.legal a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍒 Tarification recette</h1>
+  <div class="sub">Calcule ton prix de vente à partir du coût matières, du temps de préparation, et du taux de marque visé — ou l'inverse à partir d'un prix de vente cible.</div>
+
+  <div class="card">
+    <h2>Recette</h2>
+    <label for="recipeName">Nom de la recette</label>
+    <input type="text" id="recipeName" value="Tarte aux fruits" oninput="calculate()">
+  </div>
+
+  <div class="card">
+    <h2>Ingrédients</h2>
+    <div class="row-header">
+      <span>Ingrédient</span>
+      <span>Prix d'achat</span>
+      <span>Unité</span>
+      <span>Qté utilisée</span>
+      <span>Coût</span>
+      <span></span>
+    </div>
+    <div id="ingredientsList"></div>
+    <button class="add-btn" onclick="addIngredient()">+ Ajouter un ingrédient</button>
+    <div style="display:flex; justify-content:flex-end; margin-top:12px; padding-top:10px; border-top:1px solid var(--ligne); font-size:14px; font-weight:bold;">
+      <span>Sous-total matières&nbsp;: <span id="subtotalMateriel">—</span></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Main d'œuvre</h2>
+    <div class="grid2">
+      <div>
+        <label for="prepTime">Temps de préparation (minutes)</label>
+        <input type="number" id="prepTime" value="30" min="0" step="1" oninput="calculate()">
+      </div>
+      <div>
+        <label for="hourlyRate">Taux horaire MO (€/h)</label>
+        <input type="number" id="hourlyRate" value="18.03" min="0" step="0.5" oninput="calculate()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Énergie (cuisson)</h2>
+    <div class="grid3">
+      <div>
+        <label for="cookTime">Temps de cuisson (minutes)</label>
+        <input type="number" id="cookTime" value="0" min="0" step="1" oninput="calculate()">
+      </div>
+      <div>
+        <label for="applianceKw">Puissance de l'appareil (kW)</label>
+        <input type="number" id="applianceKw" value="2.5" min="0" step="0.1" oninput="calculate()">
+      </div>
+      <div>
+        <label for="kwhPrice">Prix du kWh (€)</label>
+        <input type="number" id="kwhPrice" value="0.20" min="0" step="0.01" oninput="calculate()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Rendement &amp; objectif commercial</h2>
+    <div style="margin-bottom:14px;">
+      <label>Mode de calcul</label>
+      <div style="display:flex; gap:20px; margin-top:4px;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--navy); margin-bottom:0;">
+          <input type="radio" name="pricingMode" value="taux" checked onchange="togglePricingMode()" style="width:auto;"> Je fixe le taux de marque
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--navy); margin-bottom:0;">
+          <input type="radio" name="pricingMode" value="prix" onchange="togglePricingMode()" style="width:auto;"> Je fixe le prix de vente
+        </label>
+      </div>
+    </div>
+    <div class="grid3">
+      <div>
+        <label for="portions">Nombre de portions</label>
+        <input type="number" id="portions" value="8" min="1" step="1" oninput="calculate()">
+      </div>
+      <div id="markupField">
+        <label for="markupRate">Taux de marque visé (%)</label>
+        <input type="number" id="markupRate" value="70" min="1" max="99" step="1" oninput="calculate()">
+      </div>
+      <div id="priceField" style="display:none;">
+        <label for="targetPriceTTC">Prix de vente TTC visé / portion (€)</label>
+        <input type="number" id="targetPriceTTC" value="6.00" min="0" step="0.10" oninput="calculate()">
+      </div>
+      <div>
+        <label for="vatRate">TVA (%)</label>
+        <input type="number" id="vatRate" value="10" min="0" step="0.5" oninput="calculate()">
+      </div>
+    </div>
+  </div>
+
+  <div class="result-card">
+    <h2>Résultat</h2>
+    <div class="result-line muted"><span>Coût matières (recette entière)</span><span id="outMateriel">—</span></div>
+    <div class="result-line muted"><span>Coût main d'œuvre</span><span id="outMO">—</span></div>
+    <div class="result-line muted"><span>Coût énergie (cuisson)</span><span id="outEnergie">—</span></div>
+    <div class="result-line"><span>Coût de revient total</span><span id="outCoutTotal">—</span></div>
+    <div class="result-line"><span>Coût de revient / portion</span><span id="outCoutPortion">—</span></div>
+
+    <div class="result-line"><span>Prix de vente HT / portion</span><span id="outPVHT">—</span></div>
+    <div class="headline">
+      <span class="label">Prix de vente TTC / portion</span>
+      <span class="value" id="outPVTTC">—</span>
+    </div>
+    <div class="result-line" style="margin-top:10px;"><span>Marge / portion</span><span id="outMargeValeur">—</span></div>
+    <div class="result-line"><span>Taux de marque</span><span id="outTauxMarque">—</span></div>
+    <div class="result-line"><span>Coefficient multiplicateur</span><span id="outCoefficient">—</span></div>
+  </div>
+
+  <button class="add-btn" id="exportBtn" onclick="exportExcel()" style="width:100%; text-align:center; margin-top:16px; padding:12px;">⬇ Exporter en Excel</button>
+
+  <footer class="note">
+    Coefficient multiplicateur = prix de vente HT ÷ coût de revient. C'est le chiffre à retenir au quotidien : coût de revient × coefficient = prix à afficher. Le taux de marque (marge ÷ prix de vente) sert lui à vérifier ta rentabilité en %.
+  </footer>
+
+  <footer class="legal">
+    © 2026 CERISE UP - Tous droits réservés<br>
+    Cet outil est protégé par les droits d'auteur. Toute reproduction, distribution ou utilisation commerciale sans autorisation expresse est interdite.<br>
+    <strong>Propriétaire</strong> : Lise-Marie BOURGEOIS - CERISE UP<br>
+    <strong>Contact</strong> : <a href="mailto:contact@ceriseup.fr">contact@ceriseup.fr</a><br>
+    <strong>Usage</strong> : Outil fourni à titre indicatif. Les calculs sont basés sur vos données. CERISE UP ne peut être tenu responsable des décisions commerciales prises.<br>
+    <strong>Données</strong> : Aucune donnée n'est collectée ni stockée. Tous les calculs sont effectués localement dans votre navigateur.
+  </footer>
+</div>
+
+<script>
+let ingredientCount = 0;
+
+function addIngredient(name, price, unit, qty) {
+  ingredientCount++;
+  const id = 'ing_' + ingredientCount;
+  const row = document.createElement('div');
+  row.className = 'ingredient-row';
+  row.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Ex. Farine" value="${name || ''}" oninput="calculate()">
+    <input type="number" placeholder="0.00" step="0.01" min="0" value="${price !== undefined ? price : ''}" oninput="calculate()">
+    <input type="text" placeholder="kg, L, pièce…" value="${unit || ''}" oninput="calculate()">
+    <input type="number" placeholder="0" step="0.01" min="0" value="${qty !== undefined ? qty : ''}" oninput="calculate()">
+    <span class="ingredient-cost">—</span>
+    <button class="remove-btn" onclick="document.getElementById('${id}').remove(); calculate();" title="Supprimer">×</button>
+  `;
+  document.getElementById('ingredientsList').appendChild(row);
+  calculate();
+}
+
+function formatEUR(n) {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+function formatPct(n) {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+}
+
+function togglePricingMode() {
+  const mode = document.querySelector('input[name="pricingMode"]:checked').value;
+  document.getElementById('markupField').style.display = mode === 'taux' ? 'block' : 'none';
+  document.getElementById('priceField').style.display = mode === 'prix' ? 'block' : 'none';
+  calculate();
+}
+
+function calculate() {
+  const rows = document.querySelectorAll('.ingredient-row');
+  let coutMateriel = 0;
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const prix = parseFloat(inputs[1].value) || 0;
+    const qte = parseFloat(inputs[3].value) || 0;
+    const ligneCost = prix * qte;
+    coutMateriel += ligneCost;
+    row.querySelector('.ingredient-cost').textContent = formatEUR(ligneCost);
+  });
+  document.getElementById('subtotalMateriel').textContent = formatEUR(coutMateriel);
+
+  const prepTime = parseFloat(document.getElementById('prepTime').value) || 0;
+  const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const coutMO = (prepTime / 60) * hourlyRate;
+
+  const cookTime = parseFloat(document.getElementById('cookTime').value) || 0;
+  const applianceKw = parseFloat(document.getElementById('applianceKw').value) || 0;
+  const kwhPrice = parseFloat(document.getElementById('kwhPrice').value) || 0;
+  const coutEnergie = applianceKw * (cookTime / 60) * kwhPrice;
+
+  const coutTotal = coutMateriel + coutMO + coutEnergie;
+  const portions = Math.max(parseFloat(document.getElementById('portions').value) || 1, 1);
+  const coutPortion = coutTotal / portions;
+
+  const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+  const mode = document.querySelector('input[name="pricingMode"]:checked').value;
+
+  let pvHT = NaN, pvTTC = NaN;
+  if (mode === 'taux') {
+    const markupRate = parseFloat(document.getElementById('markupRate').value);
+    if (markupRate > 0 && markupRate < 100) {
+      pvHT = coutPortion / (1 - markupRate / 100);
+    }
+    pvTTC = pvHT * (1 + vatRate / 100);
+  } else {
+    const targetPriceTTC = parseFloat(document.getElementById('targetPriceTTC').value) || 0;
+    pvTTC = targetPriceTTC;
+    pvHT = targetPriceTTC / (1 + vatRate / 100);
+  }
+
+  const margeValeur = pvHT - coutPortion;
+  const tauxMarqueAtteint = pvHT > 0 ? (margeValeur / pvHT) * 100 : NaN;
+  const coefficient = coutPortion > 0 ? (pvHT / coutPortion) : NaN;
+
+  document.getElementById('outMateriel').textContent = formatEUR(coutMateriel);
+  document.getElementById('outMO').textContent = formatEUR(coutMO);
+  document.getElementById('outEnergie').textContent = formatEUR(coutEnergie);
+  document.getElementById('outCoutTotal').textContent = formatEUR(coutTotal);
+  document.getElementById('outCoutPortion').textContent = formatEUR(coutPortion);
+  document.getElementById('outPVHT').textContent = formatEUR(pvHT);
+  document.getElementById('outPVTTC').textContent = formatEUR(pvTTC);
+  document.getElementById('outMargeValeur').textContent = formatEUR(margeValeur);
+  document.getElementById('outTauxMarque').textContent = formatPct(tauxMarqueAtteint);
+  document.getElementById('outCoefficient').textContent = isFinite(coefficient) ? coefficient.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+}
+
+function exportExcel() {
+  const recipeName = document.getElementById('recipeName').value || 'Recette';
+
+  const rows = document.querySelectorAll('.ingredient-row');
+  const ingredientData = [['Ingrédient', "Prix d'achat unitaire (€)", 'Unité', 'Quantité utilisée', 'Coût (€)']];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const nom = inputs[0].value || '';
+    const prix = parseFloat(inputs[1].value) || 0;
+    const unite = inputs[2].value || '';
+    const qte = parseFloat(inputs[3].value) || 0;
+    ingredientData.push([nom, prix, unite, qte, +(prix * qte).toFixed(2)]);
+  });
+  const coutMateriel = ingredientData.slice(1).reduce((s, r) => s + r[4], 0);
+  ingredientData.push([]);
+  ingredientData.push(['Sous-total matières', '', '', '', +coutMateriel.toFixed(2)]);
+
+  const prepTime = parseFloat(document.getElementById('prepTime').value) || 0;
+  const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const cookTime = parseFloat(document.getElementById('cookTime').value) || 0;
+  const applianceKw = parseFloat(document.getElementById('applianceKw').value) || 0;
+  const kwhPrice = parseFloat(document.getElementById('kwhPrice').value) || 0;
+  const portions = Math.max(parseFloat(document.getElementById('portions').value) || 1, 1);
+  const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+  const mode = document.querySelector('input[name="pricingMode"]:checked').value;
+
+  const coutMO = (prepTime / 60) * hourlyRate;
+  const coutEnergie = applianceKw * (cookTime / 60) * kwhPrice;
+  const coutTotal = coutMateriel + coutMO + coutEnergie;
+  const coutPortion = coutTotal / portions;
+
+  let pvHT = NaN, pvTTC = NaN, markupRateInput = '';
+  if (mode === 'taux') {
+    const markupRate = parseFloat(document.getElementById('markupRate').value) || 0;
+    markupRateInput = markupRate;
+    if (markupRate > 0 && markupRate < 100) pvHT = coutPortion / (1 - markupRate / 100);
+    pvTTC = pvHT * (1 + vatRate / 100);
+  } else {
+    const targetPriceTTC = parseFloat(document.getElementById('targetPriceTTC').value) || 0;
+    pvTTC = targetPriceTTC;
+    pvHT = targetPriceTTC / (1 + vatRate / 100);
+  }
+  const margeValeur = pvHT - coutPortion;
+  const tauxMarqueAtteint = pvHT > 0 ? (margeValeur / pvHT) * 100 : NaN;
+  const coefficient = coutPortion > 0 ? pvHT / coutPortion : NaN;
+
+  const summaryData = [
+    ['Recette', recipeName],
+    ['Mode de calcul', mode === 'taux' ? 'Taux de marque fixé' : 'Prix de vente fixé'],
+    [],
+    ['Coût matières (total)', +coutMateriel.toFixed(2)],
+    ['Temps de préparation (min)', prepTime],
+    ['Taux horaire MO (€/h)', hourlyRate],
+    ['Coût main d\'œuvre', +coutMO.toFixed(2)],
+    ['Temps de cuisson (min)', cookTime],
+    ['Puissance appareil (kW)', applianceKw],
+    ['Prix du kWh (€)', kwhPrice],
+    ['Coût énergie', +coutEnergie.toFixed(2)],
+    ['Coût de revient total', +coutTotal.toFixed(2)],
+    ['Nombre de portions', portions],
+    ['Coût de revient / portion', +coutPortion.toFixed(2)],
+    [],
+    mode === 'taux' ? ['Taux de marque visé (%)', markupRateInput] : ['Prix de vente TTC visé (€)', pvTTC],
+    ['TVA (%)', vatRate],
+    ['Prix de vente HT / portion', +(isFinite(pvHT) ? pvHT.toFixed(2) : 0)],
+    ['Prix de vente TTC / portion', +(isFinite(pvTTC) ? pvTTC.toFixed(2) : 0)],
+    ['Marge / portion', +(isFinite(margeValeur) ? margeValeur.toFixed(2) : 0)],
+    ['Taux de marque obtenu (%)', +(isFinite(tauxMarqueAtteint) ? tauxMarqueAtteint.toFixed(1) : 0)],
+    ['Coefficient multiplicateur', +(isFinite(coefficient) ? coefficient.toFixed(2) : 0)],
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{ wch: 32 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé');
+
+  const wsIngredients = XLSX.utils.aoa_to_sheet(ingredientData);
+  wsIngredients['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, wsIngredients, 'Ingrédients');
+
+  const filename = recipeName.trim().replace(/[^\w\-]+/g, '_') || 'recette';
+  XLSX.writeFile(wb, `Tarification_${filename}.xlsx`);
+}
+
+// Init with example
+addIngredient('Farine', 1.20, 'kg', 0.4);
+addIngredient('Fruits frais', 4.50, 'kg', 0.6);
+addIngredient('Beurre', 8.00, 'kg', 0.15);
+addIngredient('Œuf', 0.27, 'pièce', 3);
+document.getElementById('cookTime').value = 35;
+calculate();
+</script>
+</body>
+</html>
