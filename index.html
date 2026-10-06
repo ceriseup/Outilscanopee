@@ -68,7 +68,7 @@
 
   .row-header {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 32px;
+    grid-template-columns: 2fr 1fr 1fr 1fr 32px;
     gap: 8px;
     font-size: 11px;
     color: #8a8d96;
@@ -79,16 +79,10 @@
   }
   .ingredient-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 32px;
+    grid-template-columns: 2fr 1fr 1fr 1fr 32px;
     gap: 8px;
     align-items: center;
     margin-bottom: 8px;
-  }
-  .ingredient-cost {
-    font-size: 13px;
-    color: var(--navy);
-    text-align: right;
-    padding-right: 4px;
   }
   .remove-btn {
     background: none;
@@ -204,20 +198,64 @@
   <h1>🍒 Tarification recette</h1>
   <div class="sub">Calcule ton prix de vente à partir du coût matières, du temps de préparation, et du taux de marque visé — ou l'inverse à partir d'un prix de vente cible.</div>
 
+  <div class="card" style="border-color:var(--lilas);">
+    <h2>Convertisseur d'achat</h2>
+    <div class="grid3">
+      <div>
+        <label for="convQty1">J'achète</label>
+        <input type="number" id="convQty1" placeholder="Ex. 10" min="0" step="0.01" oninput="convertUnit()">
+      </div>
+      <div>
+        <label for="convUnit1">Unité</label>
+        <select id="convUnit1" onchange="convertUnit()" style="width:100%; padding:8px 10px; border:1px solid var(--ligne); border-radius:6px; font-size:14px; font-family:'DM Sans', Arial, sans-serif; color:var(--navy); background:#fff;">
+          <option value="g">grammes (g)</option>
+          <option value="kg" selected>kilogrammes (kg)</option>
+          <option value="ml">millilitres (mL)</option>
+          <option value="l">litres (L)</option>
+          <option value="piece">pièce</option>
+        </select>
+      </div>
+      <div>
+        <label for="convPrice">Pour un prix de (€)</label>
+        <input type="number" id="convPrice" placeholder="Ex. 20" min="0" step="0.01" oninput="convertUnit()">
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:14px;">
+      <div>
+        <label for="convQty2">Je veux connaître le prix de</label>
+        <input type="number" id="convQty2" placeholder="Ex. 500" min="0" step="0.01" oninput="convertUnit()">
+      </div>
+      <div>
+        <label for="convUnit2">Unité</label>
+        <select id="convUnit2" onchange="convertUnit()" style="width:100%; padding:8px 10px; border:1px solid var(--ligne); border-radius:6px; font-size:14px; font-family:'DM Sans', Arial, sans-serif; color:var(--navy); background:#fff;">
+          <option value="g" selected>grammes (g)</option>
+          <option value="kg">kilogrammes (kg)</option>
+          <option value="ml">millilitres (mL)</option>
+          <option value="l">litres (L)</option>
+          <option value="piece">pièce</option>
+        </select>
+      </div>
+      <div>
+        <label>Résultat</label>
+        <div style="font-size:19px; font-weight:bold; color:var(--cerise); padding:7px 0;" id="convResultPrice">—</div>
+      </div>
+    </div>
+    <div style="font-size:11.5px; color:#9a9da5; margin-top:8px;">Produit en croix. Approximation 1 mL ≈ 1 g pour les liquides. Reporte le résultat directement dans la colonne "Coût" de l'ingrédient ci-dessous.</div>
+  </div>
+
   <div class="card">
     <h2>Recette</h2>
     <label for="recipeName">Nom de la recette</label>
-    <input type="text" id="recipeName" value="Tarte aux fruits" oninput="calculate()">
+    <input type="text" id="recipeName" placeholder="Ex. Tarte aux fruits" value="" oninput="calculate()">
   </div>
 
   <div class="card">
     <h2>Ingrédients</h2>
     <div class="row-header">
       <span>Ingrédient</span>
-      <span>Prix d'achat</span>
+      <span>Qté (g)</span>
       <span>Unité</span>
-      <span>Qté utilisée</span>
-      <span>Coût</span>
+      <span>Coût (€)</span>
       <span></span>
     </div>
     <div id="ingredientsList"></div>
@@ -229,15 +267,22 @@
 
   <div class="card">
     <h2>Main d'œuvre</h2>
-    <div class="grid2">
+    <div class="grid3">
       <div>
         <label for="prepTime">Temps de préparation (minutes)</label>
         <input type="number" id="prepTime" value="30" min="0" step="1" oninput="calculate()">
       </div>
       <div>
-        <label for="hourlyRate">Taux horaire MO (€/h)</label>
-        <input type="number" id="hourlyRate" value="15.40" min="0" step="0.5" oninput="calculate()">
+        <label for="hourlyRateBase">Taux horaire non chargé (€/h)</label>
+        <input type="number" id="hourlyRateBase" value="12.31" min="0" step="0.01" oninput="calculate()">
       </div>
+      <div>
+        <label for="moCoefficient">Coefficient multiplicateur</label>
+        <input type="number" id="moCoefficient" value="1.45" min="0" step="0.01" oninput="calculate()">
+      </div>
+    </div>
+    <div style="margin-top:12px; font-size:13px; color:#5b5f6b;">
+      Taux horaire chargé : <strong id="outHourlyRateLoaded" style="color:var(--navy);">—</strong>
     </div>
   </div>
 
@@ -329,7 +374,7 @@
 <script>
 let ingredientCount = 0;
 
-function addIngredient(name, price, unit, qty) {
+function addIngredient(name, qty, unit, cost) {
   ingredientCount++;
   const id = 'ing_' + ingredientCount;
   const row = document.createElement('div');
@@ -337,10 +382,9 @@ function addIngredient(name, price, unit, qty) {
   row.id = id;
   row.innerHTML = `
     <input type="text" placeholder="Ex. Farine" value="${name || ''}" oninput="calculate()">
-    <input type="number" placeholder="0.00" step="0.01" min="0" value="${price !== undefined ? price : ''}" oninput="calculate()">
-    <input type="text" placeholder="kg, L, pièce…" value="${unit || ''}" oninput="calculate()">
-    <input type="number" placeholder="0" step="0.01" min="0" value="${qty !== undefined ? qty : ''}" oninput="calculate()">
-    <span class="ingredient-cost">—</span>
+    <input type="number" placeholder="grammes" step="1" min="0" value="${qty !== undefined ? qty : ''}" oninput="calculate()">
+    <input type="text" placeholder="g, pièce…" value="${unit || ''}" oninput="calculate()">
+    <input type="number" placeholder="Ex. 0.80" step="0.01" min="0" value="${cost !== undefined ? cost : ''}" oninput="calculate()">
     <button class="remove-btn" onclick="document.getElementById('${id}').remove(); calculate();" title="Supprimer">×</button>
   `;
   document.getElementById('ingredientsList').appendChild(row);
@@ -356,6 +400,40 @@ function formatPct(n) {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 }
 
+function toBaseUnit(qty, unit) {
+  if (unit === 'g' || unit === 'ml' || unit === 'piece') return qty;
+  if (unit === 'kg' || unit === 'l') return qty * 1000;
+  return qty;
+}
+
+function convertUnit() {
+  const qty1 = parseFloat(document.getElementById('convQty1').value) || 0;
+  const unit1 = document.getElementById('convUnit1').value;
+  const price = parseFloat(document.getElementById('convPrice').value) || 0;
+  const qty2 = parseFloat(document.getElementById('convQty2').value) || 0;
+  const unit2 = document.getElementById('convUnit2').value;
+
+  const out = document.getElementById('convResultPrice');
+
+  const isPiece1 = unit1 === 'piece', isPiece2 = unit2 === 'piece';
+  if (isPiece1 !== isPiece2) {
+    out.textContent = 'Unités incompatibles';
+    return;
+  }
+
+  const base1 = toBaseUnit(qty1, unit1);
+  const base2 = toBaseUnit(qty2, unit2);
+
+  if (base1 <= 0 || qty2 <= 0) {
+    out.textContent = '—';
+    return;
+  }
+
+  const pricePerBase = price / base1;
+  const result = pricePerBase * base2;
+  out.textContent = result.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' €';
+}
+
 function togglePricingMode() {
   const mode = document.querySelector('input[name="pricingMode"]:checked').value;
   document.getElementById('markupField').style.display = mode === 'taux' ? 'block' : 'none';
@@ -368,16 +446,16 @@ function calculate() {
   let coutMateriel = 0;
   rows.forEach(row => {
     const inputs = row.querySelectorAll('input');
-    const prix = parseFloat(inputs[1].value) || 0;
-    const qte = parseFloat(inputs[3].value) || 0;
-    const ligneCost = prix * qte;
+    const ligneCost = parseFloat(inputs[3].value) || 0;
     coutMateriel += ligneCost;
-    row.querySelector('.ingredient-cost').textContent = formatEUR(ligneCost);
   });
   document.getElementById('subtotalMateriel').textContent = formatEUR(coutMateriel);
 
   const prepTime = parseFloat(document.getElementById('prepTime').value) || 0;
-  const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const hourlyRateBase = parseFloat(document.getElementById('hourlyRateBase').value) || 0;
+  const moCoefficient = parseFloat(document.getElementById('moCoefficient').value) || 0;
+  const hourlyRate = hourlyRateBase * moCoefficient;
+  document.getElementById('outHourlyRateLoaded').textContent = formatEUR(hourlyRate) + ' / h';
   const coutMO = (prepTime / 60) * hourlyRate;
 
   const cookTime = parseFloat(document.getElementById('cookTime').value) || 0;
@@ -425,21 +503,23 @@ function exportExcel() {
   const recipeName = document.getElementById('recipeName').value || 'Recette';
 
   const rows = document.querySelectorAll('.ingredient-row');
-  const ingredientData = [['Ingrédient', "Prix d'achat unitaire (€)", 'Unité', 'Quantité utilisée', 'Coût (€)']];
+  const ingredientData = [['Ingrédient', 'Quantité utilisée (g)', 'Unité', 'Coût (€)']];
   rows.forEach(row => {
     const inputs = row.querySelectorAll('input');
     const nom = inputs[0].value || '';
-    const prix = parseFloat(inputs[1].value) || 0;
+    const qte = parseFloat(inputs[1].value) || 0;
     const unite = inputs[2].value || '';
-    const qte = parseFloat(inputs[3].value) || 0;
-    ingredientData.push([nom, prix, unite, qte, +(prix * qte).toFixed(2)]);
+    const cost = parseFloat(inputs[3].value) || 0;
+    ingredientData.push([nom, qte, unite, +cost.toFixed(2)]);
   });
-  const coutMateriel = ingredientData.slice(1).reduce((s, r) => s + r[4], 0);
+  const coutMateriel = ingredientData.slice(1).reduce((s, r) => s + r[3], 0);
   ingredientData.push([]);
-  ingredientData.push(['Sous-total matières', '', '', '', +coutMateriel.toFixed(2)]);
+  ingredientData.push(['Sous-total matières', '', '', +coutMateriel.toFixed(2)]);
 
   const prepTime = parseFloat(document.getElementById('prepTime').value) || 0;
-  const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+  const hourlyRateBase = parseFloat(document.getElementById('hourlyRateBase').value) || 0;
+  const moCoefficient = parseFloat(document.getElementById('moCoefficient').value) || 0;
+  const hourlyRate = hourlyRateBase * moCoefficient;
   const cookTime = parseFloat(document.getElementById('cookTime').value) || 0;
   const applianceKw = parseFloat(document.getElementById('applianceKw').value) || 0;
   const kwhPrice = parseFloat(document.getElementById('kwhPrice').value) || 0;
@@ -473,7 +553,9 @@ function exportExcel() {
     [],
     ['Coût matières (total)', +coutMateriel.toFixed(2)],
     ['Temps de préparation (min)', prepTime],
-    ['Taux horaire MO (€/h)', hourlyRate],
+    ['Taux horaire non chargé (€/h)', hourlyRateBase],
+    ['Coefficient multiplicateur MO', moCoefficient],
+    ['Taux horaire chargé (€/h)', +hourlyRate.toFixed(2)],
     ['Coût main d\'œuvre', +coutMO.toFixed(2)],
     ['Temps de cuisson (min)', cookTime],
     ['Puissance appareil (kW)', applianceKw],
@@ -498,7 +580,7 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Résumé');
 
   const wsIngredients = XLSX.utils.aoa_to_sheet(ingredientData);
-  wsIngredients['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 12 }];
+  wsIngredients['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, wsIngredients, 'Ingrédients');
 
   const filename = recipeName.trim().replace(/[^\w\-]+/g, '_') || 'recette';
@@ -506,10 +588,10 @@ function exportExcel() {
 }
 
 // Init with example
-addIngredient('Farine', 1.20, 'kg', 0.4);
-addIngredient('Fruits frais', 4.50, 'kg', 0.6);
-addIngredient('Beurre', 8.00, 'kg', 0.15);
-addIngredient('Œuf', 0.27, 'pièce', 3);
+addIngredient('Farine', 400, 'g', 0.48);
+addIngredient('Fruits frais', 600, 'g', 2.70);
+addIngredient('Beurre', 150, 'g', 1.20);
+addIngredient('Œuf', 3, 'pièce', 0.81);
 document.getElementById('cookTime').value = 35;
 calculate();
 </script>
